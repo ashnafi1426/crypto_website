@@ -18,7 +18,14 @@ return new class extends Migration
             $table->timestamp('email_verified_at')->nullable();
             $table->string('password');
             $table->rememberToken();
+            $table->boolean('is_admin')->default(false);
+            $table->timestamp('locked_until')->nullable();
+            $table->integer('failed_login_attempts')->default(0);
             $table->timestamps();
+            
+            // Indexes for performance
+            $table->index(['email', 'password']);
+            $table->index('locked_until');
         });
 
         Schema::create('password_reset_tokens', function (Blueprint $table) {
