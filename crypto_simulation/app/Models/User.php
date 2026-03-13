@@ -3,16 +3,16 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 
 class User extends Authenticatable
 {
-    /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, HasApiTokens;
 
     /**
@@ -26,6 +26,11 @@ class User extends Authenticatable
         'password',
         'is_admin',
         'failed_login_attempts',
+        'status',
+        'kyc_status',
+        'kyc_approved_at',
+        'locked_until',
+        'referred_by',
     ];
 
     /**
@@ -50,6 +55,7 @@ class User extends Authenticatable
             'password' => 'hashed',
             'is_admin' => 'boolean',
             'locked_until' => 'datetime',
+            'kyc_approved_at' => 'datetime',
         ];
     }
 
@@ -70,11 +76,67 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the trades for the user.
+     */
+    public function trades(): HasMany
+    {
+        return $this->hasMany(Trade::class);
+    }
+
+    /**
      * Get the transaction records for the user.
      */
     public function transactionRecords(): HasMany
     {
         return $this->hasMany(TransactionRecord::class);
+    }
+
+    /**
+     * Get the KYC documents for the user.
+     */
+    public function kycDocuments(): HasMany
+    {
+        return $this->hasMany(KycDocument::class);
+    }
+
+    /**
+     * Get the support tickets for the user.
+     */
+    public function supportTickets(): HasMany
+    {
+        return $this->hasMany(SupportTicket::class);
+    }
+
+    /**
+     * Get the referral program for the user.
+     */
+    public function referralProgram(): HasOne
+    {
+        return $this->hasOne(ReferralProgram::class);
+    }
+
+    /**
+     * Get the investments for the user.
+     */
+    public function investments(): HasMany
+    {
+        return $this->hasMany(Investment::class);
+    }
+
+    /**
+     * Get the user who referred this user.
+     */
+    public function referredBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'referred_by');
+    }
+
+    /**
+     * Get users referred by this user.
+     */
+    public function referrals(): HasMany
+    {
+        return $this->hasMany(User::class, 'referred_by');
     }
 
     /**
@@ -93,7 +155,7 @@ class User extends Authenticatable
      */
     public function isLocked(): bool
     {
-        return $this->locked_until && $this->locked_until->isFuture();
+        return $this->locked_until?->isFuture() ?? false;
     }
 
     /**
@@ -103,7 +165,7 @@ class User extends Authenticatable
     {
         $this->update([
             'locked_until' => now()->addMinutes($minutes),
-            'failed_login_attempts' => $this->failed_login_attempts + 1,
+            'failed_login_attempts' => ($this->failed_login_attempts ?? 0) + 1,
         ]);
     }
 
@@ -116,5 +178,29 @@ class User extends Authenticatable
             'failed_login_attempts' => 0,
             'locked_until' => null,
         ]);
+    }
+
+    /**
+     * Check if user is admin.
+     */
+    public function isAdmin(): bool
+    {
+        return $this->is_admin ?? false;
+    }
+
+    /**
+     * Check if user has completed KYC.
+     */
+    public function hasCompletedKyc(): bool
+    {
+        return $this->kyc_status === 'approved';
+    }
+
+    /**
+     * Get user's active referral code.
+     */
+    public function getReferralCodeAttribute(): ?string
+    {
+        return $this->referralProgram?->referral_code;
     }
 }

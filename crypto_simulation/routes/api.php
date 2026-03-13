@@ -65,9 +65,66 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Admin routes (admin users only)
     Route::middleware('admin')->prefix('admin')->group(function () {
+        // Dashboard and analytics
+        Route::get('/dashboard', [App\Http\Controllers\Api\AdminController::class, 'dashboard']);
+        Route::get('/analytics', [App\Http\Controllers\Api\AdminController::class, 'getAnalytics']);
+        Route::get('/real-time-metrics', [App\Http\Controllers\Api\AdminController::class, 'getRealTimeMetrics']);
         Route::get('/system-metrics', [App\Http\Controllers\Api\AdminController::class, 'systemMetrics']);
+        
+        // User management
+        Route::get('/users', [App\Http\Controllers\Api\AdminController::class, 'users']);
+        Route::get('/users/{userId}', [App\Http\Controllers\Api\AdminController::class, 'userDetails']);
         Route::post('/users/{userId}/adjust-balance', [App\Http\Controllers\Api\AdminController::class, 'adjustBalance']);
+        Route::post('/users/{userId}/toggle-status', [App\Http\Controllers\Api\AdminController::class, 'toggleUserStatus']);
+        
+        // KYC Management
+        Route::prefix('kyc')->group(function () {
+            Route::get('/submissions', [App\Http\Controllers\Api\AdminController::class, 'getKycSubmissions']);
+            Route::get('/statistics', [App\Http\Controllers\Api\AdminController::class, 'getKycStatistics']);
+            Route::post('/{documentId}/approve', [App\Http\Controllers\Api\AdminController::class, 'approveKyc']);
+            Route::post('/{documentId}/reject', [App\Http\Controllers\Api\AdminController::class, 'rejectKyc']);
+        });
+
+        // Support Tickets Management
+        Route::prefix('support')->group(function () {
+            Route::get('/tickets', [App\Http\Controllers\Api\AdminController::class, 'getSupportTickets']);
+            Route::get('/statistics', [App\Http\Controllers\Api\AdminController::class, 'getSupportStatistics']);
+            Route::post('/tickets/{ticketId}/assign', [App\Http\Controllers\Api\AdminController::class, 'assignTicket']);
+            Route::post('/tickets/{ticketId}/resolve', [App\Http\Controllers\Api\AdminController::class, 'resolveTicket']);
+        });
+
+        // Referral Program Management
+        Route::prefix('referrals')->group(function () {
+            Route::get('/programs', [App\Http\Controllers\Api\AdminController::class, 'getReferralPrograms']);
+            Route::get('/statistics', [App\Http\Controllers\Api\AdminController::class, 'getReferralStatistics']);
+            Route::post('/programs/{programId}/commission-rate', [App\Http\Controllers\Api\AdminController::class, 'updateCommissionRate']);
+        });
+
+        // Investment Management
+        Route::prefix('investments')->group(function () {
+            Route::get('/', [App\Http\Controllers\Api\AdminController::class, 'getInvestments']);
+            Route::get('/statistics', [App\Http\Controllers\Api\AdminController::class, 'getInvestmentStatistics']);
+            Route::post('/{investmentId}/cancel', [App\Http\Controllers\Api\AdminController::class, 'cancelInvestment']);
+        });
+
+        // Wallet Management
+        Route::prefix('wallets')->group(function () {
+            Route::get('/', [App\Http\Controllers\Api\AdminController::class, 'getWallets']);
+            Route::get('/statistics', [App\Http\Controllers\Api\AdminController::class, 'getWalletStatistics']);
+        });
+
+        // Deposits & Withdrawals Management
+        Route::prefix('transactions')->group(function () {
+            Route::get('/deposits', [App\Http\Controllers\Api\AdminController::class, 'getDeposits']);
+            Route::get('/withdrawals', [App\Http\Controllers\Api\AdminController::class, 'getWithdrawals']);
+            Route::post('/withdrawals/{transactionId}/approve', [App\Http\Controllers\Api\AdminController::class, 'approveWithdrawal']);
+            Route::post('/withdrawals/{transactionId}/reject', [App\Http\Controllers\Api\AdminController::class, 'rejectWithdrawal']);
+        });
+        
+        // Security and monitoring
         Route::get('/suspicious-activities', [App\Http\Controllers\Api\AdminController::class, 'suspiciousActivities']);
+        
+        // System controls
         Route::post('/cryptocurrencies/{symbol}/override-price', [App\Http\Controllers\Api\AdminController::class, 'overridePrice']);
         Route::post('/maintenance-mode', [App\Http\Controllers\Api\AdminController::class, 'maintenanceMode']);
     });

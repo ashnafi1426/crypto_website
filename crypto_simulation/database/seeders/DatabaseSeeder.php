@@ -2,7 +2,6 @@
 
 namespace Database\Seeders;
 
-use App\Models\User;
 use Illuminate\Database\Console\Seeds\WithoutModelEvents;
 use Illuminate\Database\Seeder;
 
@@ -15,11 +14,15 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
-        // User::factory(10)->create();
-
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $this->call([
+            CryptocurrencySeeder::class,
+            AdminUserSeeder::class,
+            AdminTestDataSeeder::class,
         ]);
+
+        echo "\n🎉 Database seeding completed successfully!\n";
+        echo "📧 Admin Login: admin@cryptoexchange.com\n";
+        echo "🔑 Admin Password: admin123\n";
+        echo "🌐 You can now test the admin backend functionality!\n\n";
     }
 }

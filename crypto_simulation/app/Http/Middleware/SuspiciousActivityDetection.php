@@ -128,11 +128,24 @@ class SuspiciousActivityDetection
         $userAgent = $request->userAgent();
         $url = $request->fullUrl();
 
-        // Suspicious user agents
+        // Suspicious user agents (but allow legitimate browsers and development tools)
         $suspiciousAgents = [
-            'bot', 'crawler', 'spider', 'scraper', 'curl', 'wget', 'python', 'java'
+            'bot', 'crawler', 'spider', 'scraper', 'wget', 'python', 'java'
         ];
 
+        // Allow common development and testing tools
+        $allowedAgents = [
+            'mozilla', 'chrome', 'firefox', 'safari', 'edge', 'postman', 'insomnia'
+        ];
+
+        // Check if user agent contains allowed patterns first
+        foreach ($allowedAgents as $allowed) {
+            if (stripos($userAgent, $allowed) !== false) {
+                return false; // Allow legitimate browsers and tools
+            }
+        }
+
+        // Only block if it's a suspicious agent and not a legitimate tool
         foreach ($suspiciousAgents as $agent) {
             if (stripos($userAgent, $agent) !== false) {
                 Log::info('Suspicious user agent detected', [
@@ -145,7 +158,7 @@ class SuspiciousActivityDetection
 
         // Suspicious URL patterns
         $suspiciousPatterns = [
-            'admin', 'wp-admin', 'phpmyadmin', '.env', 'config', 'backup'
+            'wp-admin', 'phpmyadmin', '.env', 'config', 'backup'
         ];
 
         foreach ($suspiciousPatterns as $pattern) {

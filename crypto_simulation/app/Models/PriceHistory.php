@@ -8,6 +8,11 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class PriceHistory extends Model
 {
     /**
+     * The table associated with the model.
+     */
+    protected $table = 'price_history';
+
+    /**
      * Indicates if the model should be timestamped.
      */
     public $timestamps = false;

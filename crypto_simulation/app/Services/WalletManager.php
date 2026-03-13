@@ -61,7 +61,7 @@ class WalletManager implements WalletManagerInterface
     /**
      * Update balance for user and cryptocurrency with transaction logging.
      */
-    public function updateBalance(int $userId, string $cryptocurrency, string $amount, string $reason): array
+    public function updateBalance(int $userId, string $cryptocurrency, string $amount, string $reason, ?string $description = null): array
     {
         try {
             DB::beginTransaction();
@@ -101,13 +101,12 @@ class WalletManager implements WalletManagerInterface
             TransactionRecord::create([
                 'user_id' => $userId,
                 'cryptocurrency_symbol' => $cryptocurrency,
-                'transaction_type' => bccomp($amount, '0', 8) >= 0 ? 'credit' : 'debit',
-                'amount' => $amount,
-                'balance_before' => $oldBalance,
-                'balance_after' => $newBalance,
-                'description' => $reason,
+                'type' => bccomp($amount, '0', 8) >= 0 ? 'deposit' : 'withdrawal',
+                'amount' => abs($amount),
+                'status' => 'completed',
+                'description' => $description ?? $reason,
                 'reference_id' => Str::uuid(),
-                'created_at' => now()
+                'processed_at' => now()
             ]);
 
             DB::commit();
@@ -247,6 +246,7 @@ class WalletManager implements WalletManagerInterface
                 'amount' => $amount,
                 'balance_before' => $wallet->balance,
                 'balance_after' => $wallet->balance, // Balance doesn't change, only reserved
+                'reason' => 'Balance reserved for order',
                 'description' => 'Balance reserved for order',
                 'reference_id' => $reservationId,
                 'created_at' => now()
@@ -315,8 +315,9 @@ class WalletManager implements WalletManagerInterface
                 'amount' => $reservationRecord->amount,
                 'balance_before' => $wallet->balance,
                 'balance_after' => $wallet->balance,
+                'reason' => 'Reserved balance released',
                 'description' => 'Reserved balance released',
-                'reference_id' => $reservationId . '_release',
+                'reference_id' => "{$reservationId}_release",
                 'created_at' => now()
             ]);
 

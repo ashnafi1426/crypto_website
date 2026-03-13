@@ -34,6 +34,30 @@ class TradingServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Register queue event listeners for monitoring and failure handling
+        $this->registerQueueEventListeners();
+    }
+
+    /**
+     * Register queue event listeners
+     */
+    private function registerQueueEventListeners(): void
+    {
+        $queueFailureHandler = app(\App\Services\QueueFailureHandler::class);
+
+        // Listen for job processing events
+        \Illuminate\Support\Facades\Queue::before(function (\Illuminate\Queue\Events\JobProcessing $event) use ($queueFailureHandler) {
+            $queueFailureHandler->handleJobProcessing($event);
+        });
+
+        // Listen for job success events
+        \Illuminate\Support\Facades\Queue::after(function (\Illuminate\Queue\Events\JobProcessed $event) use ($queueFailureHandler) {
+            $queueFailureHandler->handleJobProcessed($event);
+        });
+
+        // Listen for job failure events
+        \Illuminate\Support\Facades\Queue::failing(function (\Illuminate\Queue\Events\JobFailed $event) use ($queueFailureHandler) {
+            $queueFailureHandler->handleJobFailed($event);
+        });
     }
 }

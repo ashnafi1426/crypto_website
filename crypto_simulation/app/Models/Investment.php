@@ -6,39 +6,36 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class Trade extends Model
+class Investment extends Model
 {
     use HasFactory;
 
     protected $fillable = [
         'user_id',
-        'order_id',
         'cryptocurrency_symbol',
-        'quantity',
-        'price',
-        'total_amount',
-        'side',
-        'fee',
+        'investment_type',
+        'amount',
+        'duration_days',
+        'expected_return_rate',
+        'current_value',
         'status',
-        'executed_at'
+        'started_at',
+        'maturity_date',
+        'completed_at'
     ];
 
     protected $casts = [
-        'quantity' => 'decimal:8',
-        'price' => 'decimal:8',
-        'total_amount' => 'decimal:8',
-        'fee' => 'decimal:8',
-        'executed_at' => 'datetime'
+        'amount' => 'decimal:8',
+        'expected_return_rate' => 'decimal:4',
+        'current_value' => 'decimal:8',
+        'started_at' => 'datetime',
+        'maturity_date' => 'datetime',
+        'completed_at' => 'datetime'
     ];
 
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
-    }
-
-    public function order(): BelongsTo
-    {
-        return $this->belongsTo(Order::class);
     }
 
     public function cryptocurrency(): BelongsTo

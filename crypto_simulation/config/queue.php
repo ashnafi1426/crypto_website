@@ -73,6 +73,26 @@ return [
             'after_commit' => false,
         ],
 
+        // High-priority trading queue
+        'trading' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'trading',
+            'retry_after' => 30,
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
+        // Price update queue
+        'prices' => [
+            'driver' => 'redis',
+            'connection' => env('REDIS_QUEUE_CONNECTION', 'default'),
+            'queue' => 'prices',
+            'retry_after' => 60,
+            'block_for' => null,
+            'after_commit' => false,
+        ],
+
         'deferred' => [
             'driver' => 'deferred',
         ],
