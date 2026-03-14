@@ -10,24 +10,27 @@ class TransactionRecord extends Model
 {
     use HasFactory;
 
+    public $timestamps = false; // Disable automatic timestamps
+
     protected $fillable = [
         'user_id',
-        'type',
+        'transaction_type',
         'cryptocurrency_symbol',
         'amount',
-        'fee',
-        'status',
+        'balance_before',
+        'balance_after',
+        'reason',
         'description',
         'reference_id',
-        'wallet_address',
-        'transaction_hash',
-        'processed_at'
+        'metadata',
+        'created_at'
     ];
 
     protected $casts = [
         'amount' => 'decimal:8',
-        'fee' => 'decimal:8',
-        'processed_at' => 'datetime'
+        'balance_before' => 'decimal:8',
+        'balance_after' => 'decimal:8',
+        'metadata' => 'array'
     ];
 
     public function user(): BelongsTo

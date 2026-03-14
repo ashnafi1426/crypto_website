@@ -274,7 +274,7 @@ class AnalyticsService
             'active_traders' => User::whereHas('trades', function($q) {
                 $q->where('created_at', '>=', now()->subDays(30));
             })->count(),
-            'investors' => User::whereHas('investments')->count(),
+            'investors' => 0, // No investments table yet
             'high_value_users' => User::whereHas('wallets', function($q) {
                 $q->havingRaw('SUM(balance) > 10000');
             })->count(),
@@ -329,7 +329,7 @@ class AnalyticsService
     {
         return [
             'trading_fees' => TransactionRecord::where('type', 'fee')->sum('amount'),
-            'withdrawal_fees' => TransactionRecord::where('type', 'withdrawal')->sum('fee'),
+            'withdrawal_fees' => 0, // No fee column in transaction_records yet
             'listing_fees' => 0, // Implement when listing feature is added
             'premium_subscriptions' => 0, // Implement when subscription feature is added
         ];

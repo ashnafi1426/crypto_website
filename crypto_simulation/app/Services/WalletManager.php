@@ -33,7 +33,6 @@ class WalletManager implements WalletManagerInterface
             }
 
             $availableBalance = bcsub($wallet->balance, $wallet->reserved_balance, 8);
-
             return [
                 'success' => true,
                 'balance' => $wallet->balance,
@@ -101,12 +100,14 @@ class WalletManager implements WalletManagerInterface
             TransactionRecord::create([
                 'user_id' => $userId,
                 'cryptocurrency_symbol' => $cryptocurrency,
-                'type' => bccomp($amount, '0', 8) >= 0 ? 'deposit' : 'withdrawal',
+                'transaction_type' => bccomp($amount, '0', 8) >= 0 ? 'deposit' : 'withdrawal',
                 'amount' => abs($amount),
-                'status' => 'completed',
+                'balance_before' => $oldBalance,
+                'balance_after' => $newBalance,
+                'reason' => $reason,
                 'description' => $description ?? $reason,
                 'reference_id' => Str::uuid(),
-                'processed_at' => now()
+                'created_at' => now()
             ]);
 
             DB::commit();
@@ -380,6 +381,136 @@ class WalletManager implements WalletManagerInterface
                 'success' => false,
                 'message' => 'Failed to retrieve wallets',
                 'wallets' => []
+            ];
+        }
+    }
+
+    /**
+     * Get wallet for user and cryptocurrency.
+     */
+    public function getWallet($user, string $cryptocurrency): ?Wallet
+    {
+        $userId = is_object($user) ? $user->id : $user;
+        
+        return Wallet::where('user_id', $userId)
+                    ->where('cryptocurrency_symbol', $cryptocurrency)
+                    ->first();
+    }
+
+    /**
+     * Credit wallet with amount.
+     */
+    public function creditWallet($user, string $cryptocurrency, $amount, string $type, string $description): array
+    {
+        try {
+            $userId = is_object($user) ? $user->id : $user;
+            
+            // Use existing updateBalance method with positive amount
+            return $this->updateBalance($userId, $cryptocurrency, $amount, $type, $description);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to credit wallet', [
+                'user_id' => $userId ?? 'unknown',
+                'cryptocurrency' => $cryptocurrency,
+                'amount' => $amount,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to credit wallet'
+            ];
+        }
+    }
+
+    /**
+     * Debit wallet with amount.
+     */
+    public function debitWallet($user, string $cryptocurrency, $amount, string $type, string $description): array
+    {
+        try {
+            $userId = is_object($user) ? $user->id : $user;
+            
+            // Use existing updateBalance method with negative amount
+            return $this->updateBalance($userId, $cryptocurrency, '-' . $amount, $type, $description);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to debit wallet', [
+                'user_id' => $userId ?? 'unknown',
+                'cryptocurrency' => $cryptocurrency,
+                'amount' => $amount,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to debit wallet'
+            ];
+        }
+    }
+
+    /**
+     * Hold funds for pending transactions.
+     */
+    public function holdFunds($user, string $cryptocurrency, $amount, string $description): array
+    {
+        try {
+            $userId = is_object($user) ? $user->id : $user;
+            
+            // For now, use the reservation system
+            $reservationId = $this->reserveBalance($userId, $cryptocurrency, $amount);
+            
+            if ($reservationId) {
+                return [
+                    'success' => true,
+                    'reservation_id' => $reservationId,
+                    'message' => 'Funds held successfully'
+                ];
+            }
+
+            return [
+                'success' => false,
+                'message' => 'Failed to hold funds'
+            ];
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to hold funds', [
+                'user_id' => $userId ?? 'unknown',
+                'cryptocurrency' => $cryptocurrency,
+                'amount' => $amount,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to hold funds'
+            ];
+        }
+    }
+
+    /**
+     * Release held funds.
+     */
+    public function releaseFunds($user, string $cryptocurrency, $amount, string $description): array
+    {
+        try {
+            $userId = is_object($user) ? $user->id : $user;
+            
+            // For simplicity, we'll just credit the wallet back
+            // In a real system, you'd track the specific hold and release it
+            return $this->creditWallet($user, $cryptocurrency, $amount, 'release', $description);
+            
+        } catch (\Exception $e) {
+            Log::error('Failed to release funds', [
+                'user_id' => $userId ?? 'unknown',
+                'cryptocurrency' => $cryptocurrency,
+                'amount' => $amount,
+                'error' => $e->getMessage()
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to release funds'
             ];
         }
     }

@@ -24,6 +24,12 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'provider',
+        'provider_id',
+        'avatar',
+        'email_verification_token',
+        'password_reset_token',
+        'password_reset_expires_at',
         'is_admin',
         'failed_login_attempts',
         'status',
@@ -56,6 +62,7 @@ class User extends Authenticatable
             'is_admin' => 'boolean',
             'locked_until' => 'datetime',
             'kyc_approved_at' => 'datetime',
+            'password_reset_expires_at' => 'datetime',
         ];
     }
 
@@ -202,5 +209,70 @@ class User extends Authenticatable
     public function getReferralCodeAttribute(): ?string
     {
         return $this->referralProgram?->referral_code;
+    }
+
+    /**
+     * Check if user is a social login user.
+     */
+    public function isSocialUser(): bool
+    {
+        return in_array($this->provider, ['google', 'apple']);
+    }
+
+    /**
+     * Check if user is a local user.
+     */
+    public function isLocalUser(): bool
+    {
+        return $this->provider === 'local';
+    }
+
+    /**
+     * Generate email verification token.
+     */
+    public function generateEmailVerificationToken(): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $this->update(['email_verification_token' => $token]);
+        return $token;
+    }
+
+    /**
+     * Generate password reset token.
+     */
+    public function generatePasswordResetToken(): string
+    {
+        $token = bin2hex(random_bytes(32));
+        $this->update([
+            'password_reset_token' => $token,
+            'password_reset_expires_at' => now()->addHours(1),
+        ]);
+        return $token;
+    }
+
+    /**
+     * Clear password reset token.
+     */
+    public function clearPasswordResetToken(): void
+    {
+        $this->update([
+            'password_reset_token' => null,
+            'password_reset_expires_at' => null,
+        ]);
+    }
+
+    /**
+     * Verify email using token.
+     */
+    public function verifyEmail(string $token): bool
+    {
+        if ($this->email_verification_token === $token) {
+            $this->update([
+                'email_verified_at' => now(),
+                'email_verification_token' => null,
+            ]);
+            return true;
+        }
+        return false;
     }
 }

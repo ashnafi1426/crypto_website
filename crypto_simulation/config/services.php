@@ -15,11 +15,7 @@ return [
     */
 
     'postmark' => [
-        'key' => env('POSTMARK_API_KEY'),
-    ],
-
-    'resend' => [
-        'key' => env('RESEND_API_KEY'),
+        'token' => env('POSTMARK_TOKEN'),
     ],
 
     'ses' => [
@@ -28,11 +24,45 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    'resend' => [
+        'key' => env('RESEND_KEY'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | OAuth Services Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'google' => [
+        'client_id' => env('GOOGLE_CLIENT_ID'),
+        'client_secret' => env('GOOGLE_CLIENT_SECRET'),
+        'redirect_uri' => env('GOOGLE_REDIRECT_URI'),
+    ],
+
+    'apple' => [
+        'client_id' => env('APPLE_CLIENT_ID'),
+        'team_id' => env('APPLE_TEAM_ID'),
+        'key_id' => env('APPLE_KEY_ID'),
+        'private_key_path' => env('APPLE_PRIVATE_KEY_PATH'),
+        'redirect_uri' => env('APPLE_REDIRECT_URI'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Frontend Configuration
+    |--------------------------------------------------------------------------
+    */
+
+    'frontend' => [
+        'url' => env('FRONTEND_URL', 'http://localhost:5173'),
     ],
 
 ];

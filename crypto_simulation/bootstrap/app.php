@@ -12,11 +12,6 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Add Sanctum middleware for API authentication
-        $middleware->api(prepend: [
-            \Laravel\Sanctum\Http\Middleware\EnsureFrontendRequestsAreStateful::class,
-        ]);
-        
         // Add security middleware to API routes
         $middleware->api([
             \App\Http\Middleware\CorsMiddleware::class,
