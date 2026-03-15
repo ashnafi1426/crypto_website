@@ -29,6 +29,12 @@ class Cryptocurrency extends Model
         'symbol',
         'name',
         'current_price',
+        'market_cap',
+        'volume_24h',
+        'price_change_24h',
+        'price_change_percentage_24h',
+        'circulating_supply',
+        'logo_url',
         'volatility',
         'is_active',
     ];
@@ -40,6 +46,11 @@ class Cryptocurrency extends Model
     {
         return [
             'current_price' => 'decimal:8',
+            'market_cap' => 'decimal:2',
+            'volume_24h' => 'decimal:2',
+            'price_change_24h' => 'decimal:8',
+            'price_change_percentage_24h' => 'decimal:4',
+            'circulating_supply' => 'decimal:2',
             'volatility' => 'float',
             'is_active' => 'boolean',
         ];

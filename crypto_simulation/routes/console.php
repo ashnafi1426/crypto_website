@@ -31,3 +31,16 @@ Schedule::command('queue:monitor trading,prices,default --max=1000')
 Schedule::command('queue:retry all')
     ->hourly()
     ->description('Retry failed queue jobs');
+// Schedule Ethereum deposit monitoring
+Schedule::command('ethereum:check-deposits --blocks=5')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->description('Monitor Ethereum blockchain for deposits');
+
+// Schedule confirmation updates for pending deposits
+Schedule::command('ethereum:check-deposits --blocks=1')
+    ->everyFiveMinutes()
+    ->withoutOverlapping()
+    ->runInBackground()
+    ->description('Update confirmations for pending deposits');

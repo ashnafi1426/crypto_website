@@ -5,55 +5,60 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Cryptocurrency;
 use App\Models\PriceHistory;
+use App\Services\MarketService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Cache;
 
 class MarketDataController extends Controller
 {
+    protected MarketService $marketService;
+
+    public function __construct(MarketService $marketService)
+    {
+        $this->marketService = $marketService;
+    }
     /**
-     * Get all cryptocurrencies with current prices.
+     * Get all cryptocurrencies with current prices and market data.
      */
     public function index(Request $request): JsonResponse
     {
         try {
-            $cryptocurrencies = Cache::remember('cryptocurrencies_list', 300, function () {
-                return Cryptocurrency::select([
-                    'symbol',
-                    'name',
-                    'current_price',
-                    'market_cap',
-                    'volume_24h',
-                    'price_change_24h',
-                    'price_change_percentage_24h',
-                    'updated_at'
-                ])
-                ->orderBy('market_cap', 'desc')
-                ->get()
-                ->map(function ($crypto) {
-                    return [
-                        'symbol' => $crypto->symbol,
-                        'name' => $crypto->name,
-                        'current_price' => $crypto->current_price,
-                        'market_cap' => $crypto->market_cap,
-                        'volume_24h' => $crypto->volume_24h,
-                        'price_change_24h' => $crypto->price_change_24h,
-                        'price_change_percentage_24h' => $crypto->price_change_percentage_24h,
-                        'last_updated' => $crypto->updated_at->toISOString()
-                    ];
-                });
-            });
+            $markets = $this->marketService->getAllMarkets();
 
             return response()->json([
                 'success' => true,
-                'cryptocurrencies' => $cryptocurrencies,
-                'count' => $cryptocurrencies->count()
+                'cryptocurrencies' => $markets,
+                'count' => count($markets)
             ]);
 
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve market data'
+                'message' => 'Failed to retrieve market data',
+                'error' => config('app.debug') ? $e->getMessage() : null
+            ], 500);
+        }
+    }
+
+    /**
+     * Get market statistics for dashboard.
+     */
+    public function statistics(): JsonResponse
+    {
+        try {
+            $statistics = $this->marketService->getMarketStatistics();
+
+            return response()->json([
+                'success' => true,
+                'statistics' => $statistics
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve market statistics',
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }
@@ -77,29 +82,7 @@ class MarketDataController extends Controller
                 $interval = '1h';
             }
 
-            $cacheKey = "price_history_{$symbol}_{$days}_{$interval}";
-            
-            $priceHistory = Cache::remember($cacheKey, 300, function () use ($symbol, $days, $interval) {
-                $query = PriceHistory::where('cryptocurrency_symbol', $symbol)
-                    ->where('created_at', '>=', now()->subDays($days))
-                    ->orderBy('created_at', 'asc');
-
-                // Apply interval filtering
-                if ($interval === '4h') {
-                    $query->whereRaw('EXTRACT(HOUR FROM created_at) % 4 = 0');
-                } elseif ($interval === '1d') {
-                    $query->whereRaw('EXTRACT(HOUR FROM created_at) = 0');
-                }
-
-                return $query->get()->map(function ($record) {
-                    return [
-                        'timestamp' => $record->created_at->timestamp * 1000, // JavaScript timestamp
-                        'price' => $record->price,
-                        'volume' => $record->volume ?? '0',
-                        'market_cap' => $record->market_cap ?? '0'
-                    ];
-                });
-            });
+            $priceHistory = $this->marketService->getPriceHistory($symbol, $days, $interval);
 
             return response()->json([
                 'success' => true,
@@ -112,7 +95,8 @@ class MarketDataController extends Controller
         } catch (\Exception $e) {
             return response()->json([
                 'success' => false,
-                'message' => 'Failed to retrieve price history'
+                'message' => 'Failed to retrieve price history',
+                'error' => config('app.debug') ? $e->getMessage() : null
             ], 500);
         }
     }

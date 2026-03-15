@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Services\Contracts\AuthenticationServiceInterface;
 use App\Services\EmailVerificationService;
 use App\Services\TwoFactorAuthService;
+use App\Services\PasswordResetService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
@@ -17,15 +18,18 @@ class AuthController extends Controller
     private AuthenticationServiceInterface $authService;
     private EmailVerificationService $emailVerificationService;
     private TwoFactorAuthService $twoFactorService;
+    private PasswordResetService $passwordResetService;
 
     public function __construct(
         AuthenticationServiceInterface $authService,
         EmailVerificationService $emailVerificationService,
-        TwoFactorAuthService $twoFactorService
+        TwoFactorAuthService $twoFactorService,
+        PasswordResetService $passwordResetService
     ) {
         $this->authService = $authService;
         $this->emailVerificationService = $emailVerificationService;
         $this->twoFactorService = $twoFactorService;
+        $this->passwordResetService = $passwordResetService;
     }
 
     /**
@@ -195,11 +199,11 @@ class AuthController extends Controller
             ], 422);
         }
 
-        $result = $this->authService->requestPasswordReset($request->input('email'));
+        $result = $this->passwordResetService->sendResetLink($request->input('email'));
 
         $statusCode = $result['success'] ? 200 : 400;
         
-        if (isset($result['error_code']) && $result['error_code'] === 'RATE_LIMIT_EXCEEDED') {
+        if (isset($result['error_code']) && $result['error_code'] === 'RATE_LIMITED') {
             $statusCode = 429;
         }
 
@@ -226,39 +230,43 @@ class AuthController extends Controller
             ], 422);
         }
 
-        try {
-            $user = \App\Models\User::where('email', $request->input('email'))
-                ->where('password_reset_token', $request->input('token'))
-                ->where('password_reset_expires_at', '>', now())
-                ->first();
+        $result = $this->passwordResetService->resetPassword(
+            $request->input('email'),
+            $request->input('token'),
+            $request->input('password')
+        );
 
-            if (!$user) {
-                return response()->json([
-                    'success' => false,
-                    'message' => 'Invalid or expired reset token.',
-                ], 400);
-            }
+        $statusCode = $result['success'] ? 200 : 400;
 
-            $user->update([
-                'password' => Hash::make($request->input('password')),
-                'password_reset_token' => null,
-                'password_reset_expires_at' => null,
-            ]);
+        return response()->json($result, $statusCode);
+    }
 
-            // Reset failed attempts
-            $user->resetFailedAttempts();
+    /**
+     * Verify password reset token.
+     */
+    public function verifyResetToken(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'token' => 'required|string',
+            'email' => 'required|string|email',
+        ]);
 
-            return response()->json([
-                'success' => true,
-                'message' => 'Password reset successfully.',
-            ]);
-
-        } catch (\Exception $e) {
+        if ($validator->fails()) {
             return response()->json([
                 'success' => false,
-                'message' => 'Password reset failed.',
-            ], 500);
+                'message' => 'Validation failed.',
+                'errors' => $validator->errors()
+            ], 422);
         }
+
+        $result = $this->passwordResetService->verifyResetToken(
+            $request->input('email'),
+            $request->input('token')
+        );
+
+        $statusCode = $result['valid'] ? 200 : 400;
+
+        return response()->json($result, $statusCode);
     }
 
     // ===== EMAIL VERIFICATION METHODS =====

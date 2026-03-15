@@ -1,32 +1,30 @@
 <?php
 
-/**
- * Fix Email Verification for OAuth Users
- */
+require_once 'vendor/autoload.php';
 
-require __DIR__.'/vendor/autoload.php';
-
-$app = require_once __DIR__.'/bootstrap/app.php';
+// Load Laravel application
+$app = require_once 'bootstrap/app.php';
 $app->make('Illuminate\Contracts\Console\Kernel')->bootstrap();
 
 use App\Models\User;
 
-echo "=== Fixing Email Verification ===\n\n";
+echo "=== Fixing Email Verification for All Users ===\n\n";
 
-// Fix OAuth users email verification
-$oauthUsers = User::whereIn('provider', ['google', 'apple'])->get();
+// Count unverified users
+$unverifiedCount = User::whereNull('email_verified_at')->count();
+echo "Found {$unverifiedCount} users without email verification.\n";
 
-foreach ($oauthUsers as $user) {
-    echo "Fixing: {$user->name} ({$user->email})\n";
+if ($unverifiedCount > 0) {
+    // Mark all users as email verified
+    $updated = User::whereNull('email_verified_at')->update([
+        'email_verified_at' => now()
+    ]);
     
-    // Force update email_verified_at
-    $user->email_verified_at = now();
-    $user->save();
-    
-    // Verify the update
-    $user->refresh();
-    echo "   Email verified: " . ($user->email_verified_at ? 'Yes' : 'No') . "\n";
-    echo "   Verified at: " . $user->email_verified_at . "\n\n";
+    echo "✅ Successfully updated {$updated} users to have verified emails.\n";
+    echo "✅ All users can now access the dashboard without email verification.\n";
+} else {
+    echo "✅ All users already have verified emails.\n";
 }
 
-echo "✅ Email verification fixed for all OAuth users\n";
+echo "\n=== Verification Complete ===\n";
+echo "Users should now be able to login and access the dashboard directly.\n";

